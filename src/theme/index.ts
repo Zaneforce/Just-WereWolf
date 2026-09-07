@@ -1,0 +1,152 @@
+import { StyleSheet } from 'react-native';
+import { RoleId, RoleDef } from '../types';
+
+export const colors = {
+  bgTop: '#0b0d2b',
+  bgMid: '#1c1246',
+  bgBottom: '#2a1140',
+  treeline: '#090a1c',
+  card: '#221c48',
+  cardBorder: '#3a2f66',
+  moon: '#f3dc94',
+  moonGlow: 'rgba(243, 220, 148, 0.15)',
+  btnGoldStart: '#f6d873',
+  btnGoldEnd: '#d9a441',
+  btnText: '#3a2708',
+  textPrimary: '#f0edf5',
+  textSecondary: '#a89ec4',
+  textDim: '#6b6088',
+  danger: '#b91c3c',
+  success: '#3f7d4f',
+  roleSerigala: '#b91c3c',
+  roleWarga: '#3f7d4f',
+  rolePeramal: '#7c3aed',
+  rolePelindung: '#3f7fb5',
+  rolePemburu: '#c97d2e',
+  star: 'rgba(255, 255, 255, 0.6)',
+};
+
+export const ROLE_DEFS: Record<RoleId, RoleDef> = {
+  serigala: {
+    id: 'serigala',
+    name: 'Serigala',
+    team: 'serigala',
+    description: 'Tiap malam memilih 1 pemain untuk dimangsa.',
+    color: colors.roleSerigala,
+    emoji: '🐺',
+  },
+  warga: {
+    id: 'warga',
+    name: 'Warga',
+    team: 'desa',
+    description: 'Warga biasa tanpa kemampuan khusus.',
+    color: colors.roleWarga,
+    emoji: '🏘️',
+  },
+  peramal: {
+    id: 'peramal',
+    name: 'Peramal',
+    team: 'desa',
+    description: 'Tiap malam boleh mengintip role 1 pemain.',
+    color: colors.rolePeramal,
+    emoji: '🔮',
+  },
+  pelindung: {
+    id: 'pelindung',
+    name: 'Pelindung',
+    team: 'desa',
+    description: 'Tiap malam melindungi 1 pemain dari serangan.',
+    color: colors.rolePelindung,
+    emoji: '🛡️',
+  },
+  pemburu: {
+    id: 'pemburu',
+    name: 'Pemburu',
+    team: 'desa',
+    description: 'Jika terbunuh, ia bisa menarik 1 pemain ikut mati.',
+    color: colors.rolePemburu,
+    emoji: '🏹',
+  },
+};
+
+export const shared = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderColor: colors.cardBorder,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  text: {
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  textDim: {
+    fontSize: 14,
+    color: colors.textDim,
+  },
+  goldBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 50,
+  },
+  goldBtnText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.btnText,
+  },
+  dangerBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: colors.danger,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    minHeight: 48,
+  },
+  dangerBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  playerItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+});
