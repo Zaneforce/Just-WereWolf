@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
-    "@expo-google-fonts/fredoka": "^0.4.1",
     "expo": "~57.0.20",
-    "expo-av": "^16.0.8",
-    "expo-font": "~57.0.3",
     "expo-haptics": "~57.0.2",
     "expo-speech": "~57.0.2",
     "expo-status-bar": "~57.0.1",
