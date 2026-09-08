@@ -5,20 +5,28 @@ import { colors, shared, ROLE_DEFS } from '../theme';
 import { GoldButton } from './GoldButton';
 import { FadeIn } from './FadeIn';
 import { feedback } from '../sounds';
+import { speak } from '../audio/narrator';
 
 interface Props {
   winner: 'serigala' | 'desa';
   players: Player[];
   onPlayAgain: () => void;
+  speakResult?: boolean;
 }
 
-export function GameOverPhase({ winner, players, onPlayAgain }: Props) {
+export function GameOverPhase({ winner, players, onPlayAgain, speakResult }: Props) {
   const isWolf = winner === 'serigala';
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     feedback('success');
+    if (speakResult) {
+      const msg = isWolf
+        ? 'Serigala menang! Serigala berhasil menguasai desa.'
+        : 'Desa menang! Semua serigala berhasil dieliminasi.';
+      speak(msg);
+    }
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,

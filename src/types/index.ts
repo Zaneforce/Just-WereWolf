@@ -16,14 +16,18 @@ export interface Player {
   alive: boolean;
 }
 
+export type GameMode = 'operator' | 'auto';
+
 export type Phase =
+  | 'modeSelect'
   | 'setup'
   | 'roles'
   | 'reveal'
   | 'handoff'
   | 'night'
   | 'day'
-  | 'gameover';
+  | 'gameover'
+  | 'settings';
 
 export type NightStep =
   | 'intro'
@@ -31,6 +35,24 @@ export type NightStep =
   | 'peramal'
   | 'pelindung'
   | 'outro';
+
+export type AutoNightStep =
+  | 'intro'
+  | 'passToWolf'
+  | 'serigala'
+  | 'passToSeer'
+  | 'peramal'
+  | 'seerResult'
+  | 'passToGuard'
+  | 'pelindung'
+  | 'outro';
+
+export type AutoDayStep =
+  | 'announcement'
+  | 'discussion'
+  | 'passToVoter'
+  | 'voting'
+  | 'voteResult';
 
 export interface RoleConfig {
   serigala: number;
@@ -47,18 +69,29 @@ export interface NightResult {
   killed: number | null;
 }
 
+export interface VoiceSettings {
+  enabled: boolean;
+  rate: number;
+}
+
 export interface GameState {
   phase: Phase;
+  mode: GameMode;
   players: Player[];
   roleConfig: RoleConfig;
   round: number;
   revealIndex: number;
   nightStep: NightStep;
+  autoNightStep: AutoNightStep;
   nightResult: NightResult;
   dayTimer: number;
+  autoDayStep: AutoDayStep;
+  autoVoterIndex: number;
+  autoVotes: Record<number, number | null>;
   votedOut: number | null;
   winner: 'serigala' | 'desa' | null;
   hunterPending: boolean;
   hunterPlayerId: number | null;
   lastGuardTarget: number | null;
+  previousPhase: Phase | null;
 }
