@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { SafeAreaView, StatusBar, StyleSheet, Platform } from 'react-native';
 import {
   GameState,
   NightStep,
@@ -384,5 +384,6 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 32 : 0,
   },
 });

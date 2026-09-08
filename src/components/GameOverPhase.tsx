@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Animated, Easing } from 'react-native';
 import { Player } from '../types';
 import { colors, shared, ROLE_DEFS } from '../theme';
 import { GoldButton } from './GoldButton';
+import { FadeIn } from './FadeIn';
+import { feedback } from '../sounds';
 
 interface Props {
   winner: 'serigala' | 'desa';
@@ -12,53 +14,97 @@ interface Props {
 
 export function GameOverPhase({ winner, players, onPlayAgain }: Props) {
   const isWolf = winner === 'serigala';
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    feedback('success');
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 8,
+        bounciness: 12,
+      }),
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>{isWolf ? '🐺' : '🏘️'}</Text>
-      <Text style={shared.title}>
-        {isWolf ? 'Serigala Menang!' : 'Desa Menang!'}
-      </Text>
-      <Text style={shared.subtitle}>
-        {isWolf
-          ? 'Serigala berhasil menguasai desa.'
-          : 'Semua Serigala berhasil dieliminasi!'}
-      </Text>
+      <Animated.Text
+        style={[
+          styles.emoji,
+          {
+            transform: [{ scale: scaleAnim }, { rotate: spin }],
+          },
+        ]}
+      >
+        {isWolf ? '🐺' : '🏘️'}
+      </Animated.Text>
+      <FadeIn delay={400} slideFrom="none">
+        <Text style={shared.title}>
+          {isWolf ? 'Serigala Menang!' : 'Desa Menang!'}
+        </Text>
+      </FadeIn>
+      <FadeIn delay={600} slideFrom="none">
+        <Text style={shared.subtitle}>
+          {isWolf
+            ? 'Serigala berhasil menguasai desa.'
+            : 'Semua Serigala berhasil dieliminasi!'}
+        </Text>
+      </FadeIn>
 
-      <View style={[shared.card, styles.listCard]}>
-        <Text style={styles.listTitle}>Daftar Pemain & Role</Text>
-        <FlatList
-          data={players}
-          keyExtractor={(p) => p.id.toString()}
-          scrollEnabled={false}
-          renderItem={({ item }) => {
-            const def = ROLE_DEFS[item.role];
-            return (
-              <View style={styles.playerRow}>
-                <Text
-                  style={[
-                    styles.playerName,
-                    !item.alive && styles.deadName,
-                  ]}
-                >
-                  {!item.alive ? '💀 ' : '✅ '}{item.name}
-                </Text>
-                <View style={[shared.badge, { backgroundColor: def.color }]}>
-                  <Text style={shared.badgeText}>
-                    {def.emoji} {def.name}
-                  </Text>
-                </View>
-              </View>
-            );
-          }}
+      <FadeIn delay={800} style={{ width: '100%' }}>
+        <View style={[shared.card, styles.listCard]}>
+          <Text style={styles.listTitle}>Daftar Pemain & Role</Text>
+          <FlatList
+            data={players}
+            keyExtractor={(p) => p.id.toString()}
+            scrollEnabled={false}
+            renderItem={({ item, index }) => {
+              const def = ROLE_DEFS[item.role];
+              return (
+                <FadeIn delay={900 + index * 80}>
+                  <View style={styles.playerRow}>
+                    <Text
+                      style={[
+                        styles.playerName,
+                        !item.alive && styles.deadName,
+                      ]}
+                    >
+                      {!item.alive ? '💀 ' : '✅ '}{item.name}
+                    </Text>
+                    <View style={[shared.badge, { backgroundColor: def.color }]}>
+                      <Text style={shared.badgeText}>
+                        {def.emoji} {def.name}
+                      </Text>
+                    </View>
+                  </View>
+                </FadeIn>
+              );
+            }}
+          />
+        </View>
+      </FadeIn>
+
+      <FadeIn delay={1200}>
+        <GoldButton
+          label="Main Lagi"
+          onPress={onPlayAgain}
+          style={styles.btn}
         />
-      </View>
-
-      <GoldButton
-        label="Main Lagi"
-        onPress={onPlayAgain}
-        style={styles.btn}
-      />
+      </FadeIn>
     </View>
   );
 }

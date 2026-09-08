@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { Player, NightStep, NightResult, RoleId } from '../types';
 import { colors, shared, ROLE_DEFS } from '../theme';
 import { GoldButton } from './GoldButton';
+import { FadeIn } from './FadeIn';
+import { feedback } from '../sounds';
 
 interface Props {
   players: Player[];
@@ -20,6 +24,44 @@ interface Props {
   lastGuardTarget: number | null;
   onSelectTarget: (playerId: number) => void;
   onAdvanceStep: () => void;
+}
+
+function SelectableItem({
+  name,
+  isSelected,
+  onPress,
+}: {
+  name: string;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isSelected) {
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),
+      ]).start();
+    }
+  }, [isSelected]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={[styles.targetItem, isSelected && styles.targetSelected]}
+        onPress={() => {
+          feedback('select');
+          onPress();
+        }}
+      >
+        <Text style={[styles.targetText, isSelected && styles.targetTextSelected]}>
+          {name}
+        </Text>
+        {isSelected && <Text style={styles.checkMark}>✓</Text>}
+      </Pressable>
+    </Animated.View>
+  );
 }
 
 export function NightPhase({
@@ -33,10 +75,6 @@ export function NightPhase({
   onAdvanceStep,
 }: Props) {
   const alive = players.filter((p) => p.alive);
-
-  const renderNarration = (text: string) => (
-    <Text style={styles.narration}>{text}</Text>
-  );
 
   const renderPlayerList = (
     exclude?: RoleId,
@@ -53,28 +91,13 @@ export function NightPhase({
         data={targets}
         keyExtractor={(p) => p.id.toString()}
         scrollEnabled={false}
-        renderItem={({ item }) => {
-          const isSelected = selectedId === item.id;
-          return (
-            <TouchableOpacity
-              style={[
-                styles.targetItem,
-                isSelected && styles.targetSelected,
-              ]}
-              onPress={() => onSelectTarget(item.id)}
-            >
-              <Text
-                style={[
-                  styles.targetText,
-                  isSelected && styles.targetTextSelected,
-                ]}
-              >
-                {item.name}
-              </Text>
-              {isSelected && <Text style={styles.checkMark}>✓</Text>}
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={({ item }) => (
+          <SelectableItem
+            name={item.name}
+            isSelected={selectedId === item.id}
+            onPress={() => onSelectTarget(item.id)}
+          />
+        )}
       />
     );
   };
@@ -84,104 +107,124 @@ export function NightPhase({
       case 'intro':
         return (
           <View style={styles.centered}>
-            <Text style={styles.nightIcon}>🌙</Text>
-            {renderNarration(
-              `Malam ke-${round} tiba.\nSemua pemain, pejamkan mata.`,
-            )}
-            <GoldButton label="Lanjut" onPress={onAdvanceStep} style={styles.btn} />
+            <FadeIn delay={0}>
+              <PulsingEmoji emoji="🌙" />
+            </FadeIn>
+            <FadeIn delay={200} slideFrom="none">
+              <Text style={styles.narration}>
+                {`Malam ke-${round} tiba.\nSemua pemain, pejamkan mata.`}
+              </Text>
+            </FadeIn>
+            <FadeIn delay={400}>
+              <GoldButton label="Lanjut" onPress={onAdvanceStep} style={styles.btn} />
+            </FadeIn>
           </View>
         );
 
       case 'serigala':
         return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: ROLE_DEFS.serigala.color }]}>
-              🐺 Serigala
-            </Text>
-            {renderNarration(
-              '"Serigala, buka mata dan pilih mangsa kalian."',
-            )}
-            <Text style={styles.instruction}>Pilih target:</Text>
-            {renderPlayerList('serigala', nightResult.wolfTarget)}
-            <GoldButton
-              label="Konfirmasi"
-              onPress={onAdvanceStep}
-              disabled={nightResult.wolfTarget === null}
-              style={styles.btn}
-            />
-          </View>
+          <FadeIn delay={0}>
+            <View style={styles.stepContainer}>
+              <Text style={[styles.stepTitle, { color: ROLE_DEFS.serigala.color }]}>
+                🐺 Serigala
+              </Text>
+              <Text style={styles.narration}>
+                "Serigala, buka mata dan pilih mangsa kalian."
+              </Text>
+              <Text style={styles.instruction}>Pilih target:</Text>
+              {renderPlayerList('serigala', nightResult.wolfTarget)}
+              <GoldButton
+                label="Konfirmasi"
+                onPress={onAdvanceStep}
+                disabled={nightResult.wolfTarget === null}
+                style={styles.btn}
+              />
+            </View>
+          </FadeIn>
         );
 
       case 'peramal':
         return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: ROLE_DEFS.peramal.color }]}>
-              🔮 Peramal
-            </Text>
-            {renderNarration(
-              '"Peramal, buka mata. Pilih 1 pemain untuk diintip."',
-            )}
-            {nightResult.seerResult ? (
-              <View style={[shared.card, styles.seerResult]}>
-                <Text style={styles.seerLabel}>Hasil intipan:</Text>
-                <Text
-                  style={[
-                    styles.seerRole,
-                    { color: ROLE_DEFS[nightResult.seerResult].color },
-                  ]}
-                >
-                  {ROLE_DEFS[nightResult.seerResult].emoji}{' '}
-                  {ROLE_DEFS[nightResult.seerResult].name}
-                </Text>
-                <Text style={shared.textDim}>
-                  (Hanya Operator yang melihat ini)
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.instruction}>Pilih target:</Text>
-                {renderPlayerList('peramal', nightResult.seerTarget)}
-              </>
-            )}
-            <GoldButton
-              label={nightResult.seerResult ? 'Lanjut' : 'Intip'}
-              onPress={onAdvanceStep}
-              disabled={!nightResult.seerResult && nightResult.seerTarget === null}
-              style={styles.btn}
-            />
-          </View>
+          <FadeIn delay={0}>
+            <View style={styles.stepContainer}>
+              <Text style={[styles.stepTitle, { color: ROLE_DEFS.peramal.color }]}>
+                🔮 Peramal
+              </Text>
+              <Text style={styles.narration}>
+                "Peramal, buka mata. Pilih 1 pemain untuk diintip."
+              </Text>
+              {nightResult.seerResult ? (
+                <FadeIn delay={0}>
+                  <View style={[shared.card, styles.seerResult]}>
+                    <Text style={styles.seerLabel}>Hasil intipan:</Text>
+                    <Text
+                      style={[
+                        styles.seerRole,
+                        { color: ROLE_DEFS[nightResult.seerResult].color },
+                      ]}
+                    >
+                      {ROLE_DEFS[nightResult.seerResult].emoji}{' '}
+                      {ROLE_DEFS[nightResult.seerResult].name}
+                    </Text>
+                    <Text style={shared.textDim}>
+                      (Hanya Operator yang melihat ini)
+                    </Text>
+                  </View>
+                </FadeIn>
+              ) : (
+                <>
+                  <Text style={styles.instruction}>Pilih target:</Text>
+                  {renderPlayerList('peramal', nightResult.seerTarget)}
+                </>
+              )}
+              <GoldButton
+                label={nightResult.seerResult ? 'Lanjut' : 'Intip'}
+                onPress={onAdvanceStep}
+                disabled={!nightResult.seerResult && nightResult.seerTarget === null}
+                style={styles.btn}
+              />
+            </View>
+          </FadeIn>
         );
 
       case 'pelindung':
         return (
-          <View style={styles.stepContainer}>
-            <Text style={[styles.stepTitle, { color: ROLE_DEFS.pelindung.color }]}>
-              🛡️ Pelindung
-            </Text>
-            {renderNarration(
-              '"Pelindung, buka mata. Pilih 1 pemain untuk dilindungi."',
-            )}
-            <Text style={styles.instruction}>
-              Pilih target:{lastGuardTarget !== null ? '\n(Tidak boleh sama dengan malam sebelumnya)' : ''}
-            </Text>
-            {renderPlayerList(undefined, nightResult.guardTarget, lastGuardTarget)}
-            <GoldButton
-              label="Konfirmasi"
-              onPress={onAdvanceStep}
-              disabled={nightResult.guardTarget === null}
-              style={styles.btn}
-            />
-          </View>
+          <FadeIn delay={0}>
+            <View style={styles.stepContainer}>
+              <Text style={[styles.stepTitle, { color: ROLE_DEFS.pelindung.color }]}>
+                🛡️ Pelindung
+              </Text>
+              <Text style={styles.narration}>
+                "Pelindung, buka mata. Pilih 1 pemain untuk dilindungi."
+              </Text>
+              <Text style={styles.instruction}>
+                Pilih target:{lastGuardTarget !== null ? '\n(Tidak boleh sama dengan malam sebelumnya)' : ''}
+              </Text>
+              {renderPlayerList(undefined, nightResult.guardTarget, lastGuardTarget)}
+              <GoldButton
+                label="Konfirmasi"
+                onPress={onAdvanceStep}
+                disabled={nightResult.guardTarget === null}
+                style={styles.btn}
+              />
+            </View>
+          </FadeIn>
         );
 
       case 'outro':
         return (
           <View style={styles.centered}>
-            <Text style={styles.nightIcon}>😴</Text>
-            {renderNarration(
-              '"Semua tutup mata.\nMalam telah berakhir. Bersiap menyambut pagi."',
-            )}
-            <GoldButton label="Lihat Hasil Malam" onPress={onAdvanceStep} style={styles.btn} />
+            <FadeIn delay={0}>
+              <PulsingEmoji emoji="😴" />
+            </FadeIn>
+            <FadeIn delay={200} slideFrom="none">
+              <Text style={styles.narration}>
+                "Semua tutup mata.{'\n'}Malam telah berakhir. Bersiap menyambut pagi."
+              </Text>
+            </FadeIn>
+            <FadeIn delay={400}>
+              <GoldButton label="Lihat Hasil Malam" onPress={onAdvanceStep} style={styles.btn} />
+            </FadeIn>
           </View>
         );
 
@@ -199,38 +242,74 @@ export function NightPhase({
   );
 }
 
+function PulsingEmoji({ emoji }: { emoji: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.15, duration: 1000, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
+
+  return (
+    <Animated.Text style={[styles.nightIcon, { transform: [{ scale }] }]}>
+      {emoji}
+    </Animated.Text>
+  );
+}
+
 function OperatorPanel({ players }: { players: Player[] }) {
   const [expanded, setExpanded] = React.useState(false);
+  const heightAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(heightAnim, {
+      toValue: expanded ? 1 : 0,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
+  }, [expanded]);
+
   return (
     <View style={[shared.card, styles.operatorPanel]}>
-      <TouchableOpacity onPress={() => setExpanded(!expanded)}>
+      <TouchableOpacity
+        onPress={() => {
+          feedback('tap');
+          setExpanded(!expanded);
+        }}
+      >
         <Text style={styles.operatorTitle}>
           {expanded ? '▼' : '▶'} Daftar Role (Operator)
         </Text>
       </TouchableOpacity>
       {expanded && (
-        <View style={styles.roleList}>
-          {players.map((p) => {
-            const def = ROLE_DEFS[p.role];
-            return (
-              <View key={p.id} style={styles.roleListItem}>
-                <Text
-                  style={[
-                    styles.roleListName,
-                    !p.alive && styles.deadPlayer,
-                  ]}
-                >
-                  {p.alive ? '' : '💀 '}{p.name}
-                </Text>
-                <View style={[shared.badge, { backgroundColor: def.color }]}>
-                  <Text style={shared.badgeText}>
-                    {def.emoji} {def.name}
+        <FadeIn delay={0} duration={200}>
+          <View style={styles.roleList}>
+            {players.map((p) => {
+              const def = ROLE_DEFS[p.role];
+              return (
+                <View key={p.id} style={styles.roleListItem}>
+                  <Text
+                    style={[
+                      styles.roleListName,
+                      !p.alive && styles.deadPlayer,
+                    ]}
+                  >
+                    {p.alive ? '' : '💀 '}{p.name}
                   </Text>
+                  <View style={[shared.badge, { backgroundColor: def.color }]}>
+                    <Text style={shared.badgeText}>
+                      {def.emoji} {def.name}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        </FadeIn>
       )}
     </View>
   );
@@ -241,7 +320,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   centered: {

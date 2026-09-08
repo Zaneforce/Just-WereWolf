@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,12 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { colors, shared } from '../theme';
 import { GoldButton } from './GoldButton';
+import { FadeIn } from './FadeIn';
+import { feedback } from '../sounds';
 
 interface Props {
   players: string[];
@@ -19,12 +22,74 @@ interface Props {
   onNext: () => void;
 }
 
+function AnimatedListItem({
+  name,
+  index,
+  onRemove,
+}: {
+  name: string;
+  index: number;
+  onRemove: () => void;
+}) {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 6,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        shared.playerItem,
+        {
+          opacity: opacityAnim,
+          transform: [
+            {
+              translateX: slideAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-40, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <Text style={styles.playerName}>
+        {index + 1}. {name}
+      </Text>
+      <TouchableOpacity
+        onPress={() => {
+          feedback('warning');
+          onRemove();
+        }}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={styles.removeBtn}>Hapus</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export function SetupPhase({ players, onAddPlayer, onRemovePlayer, onNext }: Props) {
   const [name, setName] = useState('');
 
   const handleAdd = () => {
     const trimmed = name.trim();
     if (trimmed.length > 0) {
+      feedback('success');
       onAddPlayer(trimmed);
       setName('');
     }
@@ -35,56 +100,60 @@ export function SetupPhase({ players, onAddPlayer, onRemovePlayer, onNext }: Pro
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={shared.title}>Daftar Pemain</Text>
-      <Text style={shared.subtitle}>Minimal 4 pemain untuk memulai</Text>
+      <FadeIn delay={0} slideFrom="none">
+        <Text style={shared.title}>Daftar Pemain</Text>
+      </FadeIn>
+      <FadeIn delay={100} slideFrom="none">
+        <Text style={shared.subtitle}>Minimal 4 pemain untuk memulai</Text>
+      </FadeIn>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nama pemain..."
-          placeholderTextColor={colors.textDim}
-          value={name}
-          onChangeText={setName}
-          onSubmitEditing={handleAdd}
-          returnKeyType="done"
-        />
-        <GoldButton label="Tambah" onPress={handleAdd} small disabled={name.trim().length === 0} />
-      </View>
+      <FadeIn delay={200}>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nama pemain..."
+            placeholderTextColor={colors.textDim}
+            value={name}
+            onChangeText={setName}
+            onSubmitEditing={handleAdd}
+            returnKeyType="done"
+          />
+          <GoldButton label="Tambah" onPress={handleAdd} small disabled={name.trim().length === 0} />
+        </View>
+      </FadeIn>
 
-      <View style={[shared.card, styles.listCard]}>
-        <Text style={styles.countText}>
-          {players.length} pemain terdaftar
-        </Text>
-        <FlatList
-          data={players}
-          keyExtractor={(_, i) => i.toString()}
-          renderItem={({ item, index }) => (
-            <View style={shared.playerItem}>
-              <Text style={styles.playerName}>
-                {index + 1}. {item}
+      <FadeIn delay={300}>
+        <View style={[shared.card, styles.listCard]}>
+          <Text style={styles.countText}>
+            {players.length} pemain terdaftar
+          </Text>
+          <FlatList
+            data={players}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={({ item, index }) => (
+              <AnimatedListItem
+                name={item}
+                index={index}
+                onRemove={() => onRemovePlayer(index)}
+              />
+            )}
+            ListEmptyComponent={
+              <Text style={[shared.textDim, styles.emptyText]}>
+                Belum ada pemain. Tambahkan di atas.
               </Text>
-              <TouchableOpacity
-                onPress={() => onRemovePlayer(index)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={styles.removeBtn}>Hapus</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          ListEmptyComponent={
-            <Text style={[shared.textDim, styles.emptyText]}>
-              Belum ada pemain. Tambahkan di atas.
-            </Text>
-          }
-        />
-      </View>
+            }
+          />
+        </View>
+      </FadeIn>
 
-      <GoldButton
-        label="Lanjut — Atur Role"
-        onPress={onNext}
-        disabled={players.length < 4}
-        style={styles.nextBtn}
-      />
+      <FadeIn delay={400}>
+        <GoldButton
+          label="Lanjut — Atur Role"
+          onPress={onNext}
+          disabled={players.length < 4}
+          style={styles.nextBtn}
+        />
+      </FadeIn>
     </KeyboardAvoidingView>
   );
 }
@@ -92,7 +161,8 @@ export function SetupPhase({ players, onAddPlayer, onRemovePlayer, onNext }: Pro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   inputRow: {
     flexDirection: 'row',

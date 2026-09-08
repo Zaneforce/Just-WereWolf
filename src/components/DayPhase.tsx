@@ -6,10 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { Player } from '../types';
 import { colors, shared, ROLE_DEFS } from '../theme';
 import { GoldButton } from './GoldButton';
+import { FadeIn } from './FadeIn';
+import { feedback } from '../sounds';
 
 interface Props {
   players: Player[];
@@ -20,6 +24,39 @@ interface Props {
 }
 
 type DayStep = 'announcement' | 'discussion' | 'voting';
+
+function TimerDisplay({ timer }: { timer: number }) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isLow = timer <= 10 && timer > 0;
+
+  useEffect(() => {
+    if (isLow) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.1, duration: 300, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        ]),
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isLow]);
+
+  const mins = Math.floor(timer / 60);
+  const secs = timer % 60;
+
+  return (
+    <Animated.Text
+      style={[
+        styles.timerText,
+        isLow && { color: colors.danger },
+        { transform: [{ scale: pulseAnim }] },
+      ]}
+    >
+      {mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}
+    </Animated.Text>
+  );
+}
 
 export function DayPhase({ players, round, killedName, killedRole, onVote }: Props) {
   const [step, setStep] = useState<DayStep>('announcement');
@@ -35,6 +72,7 @@ export function DayPhase({ players, round, killedName, killedRole, onVote }: Pro
         setTimer((t) => {
           if (t <= 1) {
             setTimerRunning(false);
+            feedback('warning');
             return 0;
           }
           return t - 1;
@@ -47,36 +85,44 @@ export function DayPhase({ players, round, killedName, killedRole, onVote }: Pro
   }, [timerRunning, timer]);
 
   const alive = players.filter((p) => p.alive);
-  const mins = Math.floor(timer / 60);
-  const secs = timer % 60;
 
   if (step === 'announcement') {
     return (
       <View style={styles.centered}>
-        <Text style={styles.sunIcon}>☀️</Text>
-        <Text style={shared.title}>Pagi Hari — Ronde {round}</Text>
+        <FadeIn delay={0}>
+          <Text style={styles.sunIcon}>☀️</Text>
+        </FadeIn>
+        <FadeIn delay={200} slideFrom="none">
+          <Text style={shared.title}>Pagi Hari — Ronde {round}</Text>
+        </FadeIn>
         {killedName ? (
-          <View style={[shared.card, styles.deathCard]}>
-            <Text style={styles.deathTitle}>💀 Korban Semalam</Text>
-            <Text style={styles.deathName}>{killedName}</Text>
-            <Text style={[styles.deathRole, { color: ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.color }]}>
-              {ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.emoji}{' '}
-              {ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.name}
-            </Text>
-          </View>
+          <FadeIn delay={400}>
+            <View style={[shared.card, styles.deathCard]}>
+              <Text style={styles.deathTitle}>💀 Korban Semalam</Text>
+              <Text style={styles.deathName}>{killedName}</Text>
+              <Text style={[styles.deathRole, { color: ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.color }]}>
+                {ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.emoji}{' '}
+                {ROLE_DEFS[killedRole as keyof typeof ROLE_DEFS]?.name}
+              </Text>
+            </View>
+          </FadeIn>
         ) : (
-          <View style={[shared.card, styles.deathCard]}>
-            <Text style={styles.safeTitle}>🎉 Tidak Ada Korban!</Text>
-            <Text style={shared.textDim}>
-              Pelindung berhasil menyelamatkan target semalam.
-            </Text>
-          </View>
+          <FadeIn delay={400}>
+            <View style={[shared.card, styles.deathCard]}>
+              <Text style={styles.safeTitle}>🎉 Tidak Ada Korban!</Text>
+              <Text style={shared.textDim}>
+                Pelindung berhasil menyelamatkan target semalam.
+              </Text>
+            </View>
+          </FadeIn>
         )}
-        <GoldButton
-          label="Mulai Diskusi"
-          onPress={() => setStep('discussion')}
-          style={styles.btn}
-        />
+        <FadeIn delay={600}>
+          <GoldButton
+            label="Mulai Diskusi"
+            onPress={() => setStep('discussion')}
+            style={styles.btn}
+          />
+        </FadeIn>
       </View>
     );
   }
@@ -84,90 +130,139 @@ export function DayPhase({ players, round, killedName, killedRole, onVote }: Pro
   if (step === 'discussion') {
     return (
       <View style={styles.centered}>
-        <Text style={shared.title}>Waktu Diskusi</Text>
-        <View style={[shared.card, styles.timerCard]}>
-          <Text style={styles.timerText}>
-            {mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}
-          </Text>
-          <View style={styles.timerBtnRow}>
-            <TouchableOpacity
-              style={styles.timerBtn}
-              onPress={() => setTimerRunning(!timerRunning)}
-            >
-              <Text style={styles.timerBtnText}>
-                {timerRunning ? 'Jeda' : 'Mulai'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.timerBtn}
-              onPress={() => {
-                setTimerRunning(false);
-                setTimer(120);
-              }}
-            >
-              <Text style={styles.timerBtnText}>Reset</Text>
-            </TouchableOpacity>
+        <FadeIn delay={0} slideFrom="none">
+          <Text style={shared.title}>Waktu Diskusi</Text>
+        </FadeIn>
+        <FadeIn delay={200}>
+          <View style={[shared.card, styles.timerCard]}>
+            <TimerDisplay timer={timer} />
+            <View style={styles.timerBtnRow}>
+              <TouchableOpacity
+                style={styles.timerBtn}
+                onPress={() => {
+                  feedback('tap');
+                  setTimerRunning(!timerRunning);
+                }}
+              >
+                <Text style={styles.timerBtnText}>
+                  {timerRunning ? 'Jeda' : 'Mulai'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.timerBtn}
+                onPress={() => {
+                  feedback('tap');
+                  setTimerRunning(false);
+                  setTimer(120);
+                }}
+              >
+                <Text style={styles.timerBtnText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-        <GoldButton
-          label="Lanjut ke Voting"
-          onPress={() => setStep('voting')}
-          style={styles.btn}
-        />
+        </FadeIn>
+        <FadeIn delay={400}>
+          <GoldButton
+            label="Lanjut ke Voting"
+            onPress={() => setStep('voting')}
+            style={styles.btn}
+          />
+        </FadeIn>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-      <Text style={shared.title}>Voting Siang</Text>
-      <Text style={shared.subtitle}>Pilih pemain untuk dieliminasi</Text>
+      <FadeIn delay={0} slideFrom="none">
+        <Text style={shared.title}>Voting Siang</Text>
+        <Text style={shared.subtitle}>Pilih pemain untuk dieliminasi</Text>
+      </FadeIn>
 
-      <FlatList
-        data={alive}
-        keyExtractor={(p) => p.id.toString()}
-        scrollEnabled={false}
-        renderItem={({ item }) => {
-          const isSelected = selectedVote === item.id && !voteNone;
-          return (
-            <TouchableOpacity
-              style={[styles.voteItem, isSelected && styles.voteSelected]}
+      {alive.map((item, i) => {
+        const isSelected = selectedVote === item.id && !voteNone;
+        return (
+          <FadeIn key={item.id} delay={100 + i * 60}>
+            <VoteItem
+              name={item.name}
+              isSelected={isSelected}
               onPress={() => {
                 setSelectedVote(item.id);
                 setVoteNone(false);
               }}
-            >
-              <Text
-                style={[styles.voteText, isSelected && styles.voteTextSelected]}
-              >
-                {item.name}
-              </Text>
-              {isSelected && <Text style={styles.checkMark}>✓</Text>}
-            </TouchableOpacity>
-          );
-        }}
-      />
+            />
+          </FadeIn>
+        );
+      })}
 
-      <TouchableOpacity
-        style={[styles.voteItem, styles.skipVote, voteNone && styles.voteSelected]}
+      <FadeIn delay={100 + alive.length * 60}>
+        <VoteItem
+          name="Tidak ada yang dieliminasi"
+          isSelected={voteNone}
+          isSkip
+          onPress={() => {
+            setVoteNone(true);
+            setSelectedVote(null);
+          }}
+        />
+      </FadeIn>
+
+      <FadeIn delay={200 + alive.length * 60}>
+        <GoldButton
+          label="Eksekusi Voting"
+          onPress={() => {
+            feedback('heavy');
+            onVote(voteNone ? null : selectedVote);
+          }}
+          disabled={selectedVote === null && !voteNone}
+          style={styles.btn}
+        />
+      </FadeIn>
+    </ScrollView>
+  );
+}
+
+function VoteItem({
+  name,
+  isSelected,
+  isSkip,
+  onPress,
+}: {
+  name: string;
+  isSelected: boolean;
+  isSkip?: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isSelected) {
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+        Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),
+      ]).start();
+    }
+  }, [isSelected]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={[
+          styles.voteItem,
+          isSkip && styles.skipVote,
+          isSelected && styles.voteSelected,
+        ]}
         onPress={() => {
-          setVoteNone(true);
-          setSelectedVote(null);
+          feedback('select');
+          onPress();
         }}
       >
-        <Text style={[styles.voteText, voteNone && styles.voteTextSelected]}>
-          Tidak ada yang dieliminasi
+        <Text style={[styles.voteText, isSelected && styles.voteTextSelected]}>
+          {name}
         </Text>
-        {voteNone && <Text style={styles.checkMark}>✓</Text>}
-      </TouchableOpacity>
-
-      <GoldButton
-        label="Eksekusi Voting"
-        onPress={() => onVote(voteNone ? null : selectedVote)}
-        disabled={selectedVote === null && !voteNone}
-        style={styles.btn}
-      />
-    </ScrollView>
+        {isSelected && <Text style={styles.checkMark}>✓</Text>}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -182,7 +277,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   sunIcon: {

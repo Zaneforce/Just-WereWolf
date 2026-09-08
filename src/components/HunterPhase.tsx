@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Animated } from 'react-native';
 import { Player } from '../types';
-import { colors, shared, ROLE_DEFS } from '../theme';
+import { colors, shared } from '../theme';
 import { GoldButton } from './GoldButton';
+import { FadeIn } from './FadeIn';
+import { feedback } from '../sounds';
 
 interface Props {
   hunterName: string;
@@ -13,42 +15,70 @@ interface Props {
 export function HunterPhase({ hunterName, players, onSelect }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const alive = players.filter((p) => p.alive);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    feedback('heavy');
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.icon]}>🏹</Text>
-      <Text style={shared.title}>Pemburu Terbunuh!</Text>
-      <Text style={shared.subtitle}>
-        {hunterName} adalah Pemburu dan berhak menarik 1 pemain untuk ikut mati.
-      </Text>
+      <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+        <FadeIn delay={0}>
+          <Text style={styles.icon}>🏹</Text>
+        </FadeIn>
+      </Animated.View>
+      <FadeIn delay={200} slideFrom="none">
+        <Text style={shared.title}>Pemburu Terbunuh!</Text>
+      </FadeIn>
+      <FadeIn delay={400} slideFrom="none">
+        <Text style={shared.subtitle}>
+          {hunterName} adalah Pemburu dan berhak menarik 1 pemain untuk ikut mati.
+        </Text>
+      </FadeIn>
 
-      <FlatList
-        data={alive}
-        keyExtractor={(p) => p.id.toString()}
-        scrollEnabled={false}
-        style={styles.list}
-        renderItem={({ item }) => {
-          const isSelected = selected === item.id;
-          return (
-            <TouchableOpacity
-              style={[styles.targetItem, isSelected && styles.targetSelected]}
-              onPress={() => setSelected(item.id)}
-            >
-              <Text style={[styles.targetText, isSelected && styles.targetTextSelected]}>
-                {item.name}
-              </Text>
-              {isSelected && <Text style={styles.checkMark}>✓</Text>}
-            </TouchableOpacity>
-          );
-        }}
-      />
+      <FadeIn delay={600} style={{ width: '100%' }}>
+        <FlatList
+          data={alive}
+          keyExtractor={(p) => p.id.toString()}
+          scrollEnabled={false}
+          style={styles.list}
+          renderItem={({ item }) => {
+            const isSelected = selected === item.id;
+            return (
+              <Pressable
+                style={[styles.targetItem, isSelected && styles.targetSelected]}
+                onPress={() => {
+                  feedback('select');
+                  setSelected(item.id);
+                }}
+              >
+                <Text style={[styles.targetText, isSelected && styles.targetTextSelected]}>
+                  {item.name}
+                </Text>
+                {isSelected && <Text style={styles.checkMark}>✓</Text>}
+              </Pressable>
+            );
+          }}
+        />
+      </FadeIn>
 
-      <GoldButton
-        label="Tembak!"
-        onPress={() => selected !== null && onSelect(selected)}
-        disabled={selected === null}
-        style={styles.btn}
-      />
+      <FadeIn delay={800}>
+        <GoldButton
+          label="Tembak!"
+          onPress={() => selected !== null && onSelect(selected)}
+          disabled={selected === null}
+          danger
+          style={styles.btn}
+        />
+      </FadeIn>
     </View>
   );
 }
@@ -62,6 +92,7 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 60,
     marginBottom: 12,
+    textAlign: 'center',
   },
   list: {
     width: '100%',
@@ -99,6 +130,5 @@ const styles = StyleSheet.create({
   btn: {
     marginTop: 20,
     minWidth: 200,
-    backgroundColor: colors.danger,
   },
 });

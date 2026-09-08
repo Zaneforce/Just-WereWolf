@@ -1,27 +1,53 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { colors } from '../theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 
-function Stars() {
+function TwinklingStars() {
+  const count = 50;
   const stars = useMemo(() => {
     const s = [];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < count; i++) {
       s.push({
         left: Math.random() * W,
-        top: Math.random() * H * 0.7,
+        top: Math.random() * H * 0.6,
         size: Math.random() * 2.5 + 0.5,
-        opacity: Math.random() * 0.6 + 0.2,
+        baseOpacity: Math.random() * 0.5 + 0.2,
+        delay: Math.random() * 3000,
+        duration: 1500 + Math.random() * 2000,
       });
     }
     return s;
   }, []);
 
+  const anims = useRef(stars.map(() => new Animated.Value(1))).current;
+
+  useEffect(() => {
+    stars.forEach((s, i) => {
+      const twinkle = () => {
+        Animated.sequence([
+          Animated.timing(anims[i], {
+            toValue: 0.2,
+            duration: s.duration / 2,
+            delay: s.delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i], {
+            toValue: 1,
+            duration: s.duration / 2,
+            useNativeDriver: true,
+          }),
+        ]).start(() => twinkle());
+      };
+      twinkle();
+    });
+  }, []);
+
   return (
     <>
       {stars.map((s, i) => (
-        <View
+        <Animated.View
           key={i}
           style={{
             position: 'absolute',
@@ -30,8 +56,11 @@ function Stars() {
             width: s.size,
             height: s.size,
             borderRadius: s.size / 2,
-            backgroundColor: colors.star,
-            opacity: s.opacity,
+            backgroundColor: '#fff',
+            opacity: anims[i].interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.1, s.baseOpacity],
+            }),
           }}
         />
       ))}
@@ -40,9 +69,30 @@ function Stars() {
 }
 
 function Moon() {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.15,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
+
   return (
     <View style={styles.moonContainer}>
-      <View style={styles.moonGlow} />
+      <Animated.View
+        style={[styles.moonGlow, { transform: [{ scale: pulseAnim }] }]}
+      />
       <View style={styles.moon} />
     </View>
   );
@@ -58,7 +108,7 @@ export function NightBackground({ children }: { children: React.ReactNode }) {
       <View style={styles.gradientTop} />
       <View style={styles.gradientMid} />
       <View style={styles.gradientBottom} />
-      <Stars />
+      <TwinklingStars />
       <Moon />
       <Treeline />
       <View style={styles.content}>{children}</View>
@@ -97,35 +147,36 @@ const styles = StyleSheet.create({
   },
   moonContainer: {
     position: 'absolute',
-    top: 50,
-    right: 30,
+    top: 18,
+    right: 20,
+    zIndex: 1,
   },
   moonGlow: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: colors.moonGlow,
     position: 'absolute',
-    top: -20,
-    left: -20,
+    top: -13,
+    left: -13,
   },
   moon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.moon,
     shadowColor: colors.moon,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    elevation: 6,
   },
   treeline: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 50,
     backgroundColor: colors.treeline,
     borderTopLeftRadius: 80,
     borderTopRightRadius: 120,
