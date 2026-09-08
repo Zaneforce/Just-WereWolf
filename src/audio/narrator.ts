@@ -1,8 +1,21 @@
-import * as Speech from 'expo-speech';
+let Speech: typeof import('expo-speech') | null = null;
 
 let voiceEnabled = true;
 let voiceRate = 1.0;
 let idVoiceAvailable: boolean | null = null;
+let speechLoaded = false;
+
+async function loadSpeech() {
+  if (speechLoaded) return Speech;
+  speechLoaded = true;
+  try {
+    Speech = await import('expo-speech');
+    return Speech;
+  } catch {
+    Speech = null;
+    return null;
+  }
+}
 
 export function setVoiceEnabled(enabled: boolean) {
   voiceEnabled = enabled;
@@ -23,8 +36,10 @@ export function getVoiceRate(): number {
 
 async function checkIdVoice(): Promise<boolean> {
   if (idVoiceAvailable !== null) return idVoiceAvailable;
+  const S = await loadSpeech();
+  if (!S) { idVoiceAvailable = false; return false; }
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
+    const voices = await S.getAvailableVoicesAsync();
     idVoiceAvailable = voices.some(
       (v) => v.language.startsWith('id') || v.language.startsWith('in'),
     );
@@ -36,9 +51,11 @@ async function checkIdVoice(): Promise<boolean> {
 
 export async function speak(text: string): Promise<void> {
   if (!voiceEnabled) return;
+  const S = await loadSpeech();
+  if (!S) return;
 
   try {
-    await Speech.stop();
+    await S.stop();
   } catch {
     // ignore
   }
@@ -47,7 +64,7 @@ export async function speak(text: string): Promise<void> {
 
   return new Promise<void>((resolve) => {
     try {
-      Speech.speak(text, {
+      S.speak(text, {
         language: hasId ? 'id-ID' : undefined,
         rate: voiceRate,
         onDone: () => resolve(),
@@ -61,6 +78,7 @@ export async function speak(text: string): Promise<void> {
 }
 
 export function stop() {
+  if (!Speech) return;
   try {
     Speech.stop();
   } catch {

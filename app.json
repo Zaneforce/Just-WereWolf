@@ -12,7 +12,7 @@
     "android": {
       "package": "com.wolf.werewolfmalam",
       "adaptiveIcon": {
-        "backgroundColor": "#0b0d2b",
+        "backgroundColor": "#2a3050",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

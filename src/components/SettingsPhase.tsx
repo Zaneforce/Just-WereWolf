@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { SimpleSlider } from './SimpleSlider';
 import { colors, shared } from '../theme';
 import { GoldButton } from './GoldButton';
 import { FadeIn } from './FadeIn';
@@ -69,15 +69,12 @@ export function SettingsPhase({ onBack }: Props) {
           <View style={styles.sliderRow}>
             <Text style={styles.sliderLabel}>0.5x</Text>
             <View style={styles.sliderWrapper}>
-              <Slider
+              <SimpleSlider
                 minimumValue={0.5}
                 maximumValue={2.0}
                 step={0.1}
                 value={rate}
                 onValueChange={setRate}
-                minimumTrackTintColor={colors.moon}
-                maximumTrackTintColor={colors.cardBorder}
-                thumbTintColor={colors.moon}
                 disabled={!enabled}
               />
             </View>
