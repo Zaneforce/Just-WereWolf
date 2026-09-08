@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -122,38 +122,34 @@ export function SetupPhase({ players, onAddPlayer, onRemovePlayer, onNext }: Pro
         </View>
       </FadeIn>
 
-      <FadeIn delay={300}>
-        <View style={[shared.card, styles.listCard]}>
-          <Text style={styles.countText}>
-            {players.length} pemain terdaftar
-          </Text>
-          <FlatList
-            data={players}
-            keyExtractor={(_, i) => i.toString()}
-            renderItem={({ item, index }) => (
+      <View style={styles.listCard}>
+        <Text style={styles.countText}>
+          {players.length} pemain terdaftar
+        </Text>
+        <ScrollView style={styles.scrollArea}>
+          {players.length === 0 ? (
+            <Text style={[shared.textDim, styles.emptyText]}>
+              Belum ada pemain. Tambahkan di atas.
+            </Text>
+          ) : (
+            players.map((item, index) => (
               <AnimatedListItem
+                key={`${item}-${index}`}
                 name={item}
                 index={index}
                 onRemove={() => onRemovePlayer(index)}
               />
-            )}
-            ListEmptyComponent={
-              <Text style={[shared.textDim, styles.emptyText]}>
-                Belum ada pemain. Tambahkan di atas.
-              </Text>
-            }
-          />
-        </View>
-      </FadeIn>
+            ))
+          )}
+        </ScrollView>
+      </View>
 
-      <FadeIn delay={400}>
-        <GoldButton
-          label="Lanjut — Atur Role"
-          onPress={onNext}
-          disabled={players.length < 4}
-          style={styles.nextBtn}
-        />
-      </FadeIn>
+      <GoldButton
+        label="Lanjut — Atur Role"
+        onPress={onNext}
+        disabled={players.length < 4}
+        style={styles.nextBtn}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -182,8 +178,15 @@ const styles = StyleSheet.create({
   },
   listCard: {
     flex: 1,
-    padding: 0,
+    backgroundColor: colors.card,
+    borderColor: colors.cardBorder,
+    borderWidth: 1,
+    borderRadius: 16,
     overflow: 'hidden',
+    marginVertical: 8,
+  },
+  scrollArea: {
+    flex: 1,
   },
   countText: {
     color: colors.textSecondary,

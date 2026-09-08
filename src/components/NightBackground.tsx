@@ -4,6 +4,68 @@ import { colors } from '../theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
+}
+
+function lerpColor(
+  c1: [number, number, number],
+  c2: [number, number, number],
+  t: number,
+): string {
+  const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+  const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+  const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+  return `rgb(${r},${g},${b})`;
+}
+
+const GRADIENT_STOPS = 20;
+
+function SmoothGradient() {
+  const topRgb = hexToRgb(colors.bgTop);
+  const midRgb = hexToRgb(colors.bgMid);
+  const bottomRgb = hexToRgb(colors.bgBottom);
+  const stripHeight = H / GRADIENT_STOPS;
+
+  const strips = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < GRADIENT_STOPS; i++) {
+      const t = i / (GRADIENT_STOPS - 1);
+      let color: string;
+      if (t < 0.5) {
+        color = lerpColor(topRgb, midRgb, t * 2);
+      } else {
+        color = lerpColor(midRgb, bottomRgb, (t - 0.5) * 2);
+      }
+      result.push({ top: i * stripHeight, color });
+    }
+    return result;
+  }, []);
+
+  return (
+    <>
+      {strips.map((s, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            top: s.top,
+            left: 0,
+            right: 0,
+            height: stripHeight + 1,
+            backgroundColor: s.color,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 function TwinklingStars() {
   const count = 50;
   const stars = useMemo(() => {
@@ -11,7 +73,7 @@ function TwinklingStars() {
     for (let i = 0; i < count; i++) {
       s.push({
         left: Math.random() * W,
-        top: Math.random() * H * 0.6,
+        top: Math.random() * H * 0.65,
         size: Math.random() * 2.5 + 0.5,
         baseOpacity: Math.random() * 0.5 + 0.2,
         delay: Math.random() * 3000,
@@ -105,9 +167,7 @@ function Treeline() {
 export function NightBackground({ children }: { children: React.ReactNode }) {
   return (
     <View style={styles.bg}>
-      <View style={styles.gradientTop} />
-      <View style={styles.gradientMid} />
-      <View style={styles.gradientBottom} />
+      <SmoothGradient />
       <TwinklingStars />
       <Moon />
       <Treeline />
@@ -120,30 +180,6 @@ const styles = StyleSheet.create({
   bg: {
     flex: 1,
     backgroundColor: colors.bgTop,
-  },
-  gradientTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: H * 0.33,
-    backgroundColor: colors.bgTop,
-  },
-  gradientMid: {
-    position: 'absolute',
-    top: H * 0.33,
-    left: 0,
-    right: 0,
-    height: H * 0.33,
-    backgroundColor: colors.bgMid,
-  },
-  gradientBottom: {
-    position: 'absolute',
-    top: H * 0.66,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.bgBottom,
   },
   moonContainer: {
     position: 'absolute',

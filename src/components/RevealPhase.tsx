@@ -12,98 +12,91 @@ interface Props {
   onNext: () => void;
 }
 
-function FlipCard({ player, onReveal }: { player: Player; onReveal: () => void }) {
-  const [flipped, setFlipped] = useState(false);
-  const flipAnim = useRef(new Animated.Value(0)).current;
+function MysteryCard({ onFlip }: { onFlip: () => void }) {
   const glowAnim = useRef(new Animated.Value(0)).current;
-  const roleDef = ROLE_DEFS[player.role];
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
       ]),
     ).start();
   }, []);
 
+  return (
+    <View style={styles.mysteryCard}>
+      <Animated.View
+        style={[
+          styles.moonCircle,
+          {
+            opacity: glowAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.7, 1],
+            }),
+            transform: [{
+              scale: glowAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.1],
+              }),
+            }],
+          },
+        ]}
+      >
+        <Text style={styles.questionMark}>?</Text>
+      </Animated.View>
+      <GoldButton label="Lihat Role" onPress={onFlip} style={{ marginTop: 24 }} />
+    </View>
+  );
+}
+
+export function RevealPhase({ players, revealIndex, onNext }: Props) {
+  const [showRole, setShowRole] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  if (revealIndex >= players.length) return null;
+  const player = players[revealIndex];
+  const roleDef = ROLE_DEFS[player.role];
+
   const handleFlip = () => {
-    if (flipped) return;
     feedback('heavy');
-    setFlipped(true);
-    Animated.timing(flipAnim, {
+    setShowRole(true);
+    scaleAnim.setValue(0);
+    Animated.spring(scaleAnim, {
       toValue: 1,
-      duration: 600,
-      easing: Easing.out(Easing.back(1.5)),
       useNativeDriver: true,
-    }).start(() => {
-      onReveal();
-    });
+      speed: 10,
+      bounciness: 10,
+    }).start();
   };
 
-  const frontOpacity = flipAnim.interpolate({
-    inputRange: [0, 0.5, 0.5, 1],
-    outputRange: [1, 1, 0, 0],
-  });
-  const backOpacity = flipAnim.interpolate({
-    inputRange: [0, 0.5, 0.5, 1],
-    outputRange: [0, 0, 1, 1],
-  });
-  const rotateY = flipAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-  const scaleCard = flipAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.08, 1],
-  });
+  const handleNext = () => {
+    setShowRole(false);
+    onNext();
+  };
+
+  if (!showRole) {
+    return (
+      <View style={styles.container}>
+        <FadeIn delay={0} slideFrom="none">
+          <Text style={shared.title}>Serahkan HP ke</Text>
+        </FadeIn>
+        <FadeIn delay={100} slideFrom="none">
+          <Text style={styles.playerName}>{player.name}</Text>
+        </FadeIn>
+        <FadeIn delay={200}>
+          <MysteryCard onFlip={handleFlip} />
+        </FadeIn>
+      </View>
+    );
+  }
 
   return (
-    <Animated.View
-      style={[
-        styles.cardWrapper,
-        { transform: [{ perspective: 800 }, { rotateY }, { scale: scaleCard }] },
-      ]}
-    >
-      <Animated.View
-        style={[styles.mysteryCard, { opacity: frontOpacity }]}
-      >
-        <Animated.View
-          style={[
-            styles.moonCircle,
-            {
-              opacity: glowAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.7, 1],
-              }),
-              transform: [
-                {
-                  scale: glowAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 1.1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.questionMark}>?</Text>
-        </Animated.View>
-        <GoldButton label="Lihat Role" onPress={handleFlip} style={{ marginTop: 24 }} />
-      </Animated.View>
-
+    <View style={styles.container}>
       <Animated.View
         style={[
           styles.roleCard,
-          { borderColor: roleDef.color, opacity: backOpacity, transform: [{ rotateY: '180deg' }] },
+          { borderColor: roleDef.color, transform: [{ scale: scaleAnim }] },
         ]}
       >
         <Text style={styles.roleEmoji}>{roleDef.emoji}</Text>
@@ -115,43 +108,6 @@ function FlipCard({ player, onReveal }: { player: Player; onReveal: () => void }
           Tim: {roleDef.team === 'serigala' ? 'Serigala' : 'Desa'}
         </Text>
       </Animated.View>
-    </Animated.View>
-  );
-}
-
-export function RevealPhase({ players, revealIndex, onNext }: Props) {
-  const [revealed, setRevealed] = useState(false);
-
-  if (revealIndex >= players.length) return null;
-  const player = players[revealIndex];
-
-  if (!revealed) {
-    return (
-      <View style={styles.container}>
-        <FadeIn delay={0} slideFrom="none">
-          <Text style={shared.title}>Serahkan HP ke</Text>
-        </FadeIn>
-        <FadeIn delay={100} slideFrom="none">
-          <Text style={styles.playerName}>{player.name}</Text>
-        </FadeIn>
-        <FadeIn delay={200}>
-          <FlipCard player={player} onReveal={() => setRevealed(true)} />
-        </FadeIn>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <FadeIn delay={0}>
-        <View style={[styles.revealedCard, { borderColor: ROLE_DEFS[player.role].color }]}>
-          <Text style={styles.roleEmoji}>{ROLE_DEFS[player.role].emoji}</Text>
-          <Text style={[styles.roleName, { color: ROLE_DEFS[player.role].color }]}>
-            {ROLE_DEFS[player.role].name}
-          </Text>
-          <Text style={styles.roleDesc}>{ROLE_DEFS[player.role].description}</Text>
-        </View>
-      </FadeIn>
       <Text style={styles.playerNameSmall}>{player.name}</Text>
       <FadeIn delay={200}>
         <GoldButton
@@ -160,10 +116,7 @@ export function RevealPhase({ players, revealIndex, onNext }: Props) {
               ? 'Sembunyikan & Oper HP'
               : 'Selesai — Lanjut'
           }
-          onPress={() => {
-            setRevealed(false);
-            onNext();
-          }}
+          onPress={handleNext}
           style={styles.btn}
         />
       </FadeIn>
@@ -178,20 +131,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
-  cardWrapper: {
+  mysteryCard: {
     width: 200,
     height: 280,
     marginVertical: 16,
-  },
-  mysteryCard: {
-    ...StyleSheet.absoluteFill,
     backgroundColor: colors.card,
     borderColor: colors.cardBorder,
     borderWidth: 2,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backfaceVisibility: 'hidden',
   },
   moonCircle: {
     width: 80,
@@ -212,18 +161,8 @@ const styles = StyleSheet.create({
     color: colors.btnText,
   },
   roleCard: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backfaceVisibility: 'hidden',
-  },
-  revealedCard: {
     width: 200,
-    height: 260,
+    height: 280,
     backgroundColor: colors.card,
     borderWidth: 2,
     borderRadius: 20,
